@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -27,6 +27,7 @@ import org.apache.kafka.common.Node;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -65,13 +66,15 @@ public class ConsumerMetaData {
         Set<String> topics = consumer.subscription();
         try {
             Object coordinator = Reflect.on(consumer).get(KafkaConstants.REFLECT_FIELD_COORDINATOR);
-            String groupId = ReflectUtil.reflectSlience(consumer, KafkaConstants.REFLECT_FIELD_GROUP_ID);
-            if (groupId == null) {
-                groupId = ReflectUtil.reflectSlience(coordinator, KafkaConstants.REFLECT_FIELD_GROUP_ID);
-                if (groupId == null) {
+            Object groupIdObj = ReflectUtil.reflectSlience(consumer, KafkaConstants.REFLECT_FIELD_GROUP_ID);
+            if (groupIdObj == null) {
+                groupIdObj = ReflectUtil.reflectSlience(coordinator, KafkaConstants.REFLECT_FIELD_GROUP_ID);
+                if (groupIdObj == null) {
                     throw new PressureMeasureError("未支持的kafka版本！未能获取groupId");
                 }
             }
+
+            String groupId = groupIdObj.getClass().equals("java.util.Optional") ? ReflectUtil.reflectSlience(groupIdObj,"value") : String.valueOf(groupIdObj);
             Object metadata = Reflect.on(consumer).get("metadata");
             List<String> shadowTopic = getShadowTopics(topics, groupId);
 
@@ -92,6 +95,7 @@ public class ConsumerMetaData {
                 sb.append(Reflect.on(node).get("host").toString()).append(":").append(Reflect.on(node).get("port")
                         .toString()).append(",");
             }
+
             return new ConsumerMetaData(topics, groupId, shadowTopic, sb.substring(0, sb.length() - 1));
         } catch (ReflectException e) {
             throw new PressureMeasureError(e);
