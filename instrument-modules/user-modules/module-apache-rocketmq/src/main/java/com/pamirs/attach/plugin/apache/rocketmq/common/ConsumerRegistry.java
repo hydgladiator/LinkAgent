@@ -241,9 +241,9 @@ public final class ConsumerRegistry {
                 SubscriptionData subscriptionData = entry.getValue();
                 String topic = entry.getKey();
 
-                if (!isPermitInitConsumer(businessConsumer, topic)) {
+                /*if (!isPermitInitConsumer(businessConsumer, topic)) {
                     continue;
-                }
+                }*/
 
                 String subString = subscriptionData.getSubString();
                 String filterClassSource = subscriptionData.getFilterClassSource();

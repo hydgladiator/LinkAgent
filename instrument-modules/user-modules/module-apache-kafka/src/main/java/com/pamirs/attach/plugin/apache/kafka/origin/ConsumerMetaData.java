@@ -25,10 +25,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.Node;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 
 /**
  * @author jirenhe | jirenhe@shulie.io
@@ -74,18 +71,19 @@ public class ConsumerMetaData {
                 }
             }
 
-            String groupId = groupIdObj.getClass().equals("java.util.Optional") ? ReflectUtil.reflectSlience(groupIdObj,"value") : String.valueOf(groupIdObj);
+            String groupId = groupIdObj.getClass().getName().equals("java.util.Optional") ? ReflectUtil.reflectSlience(groupIdObj, "value") : String.valueOf(groupIdObj);
             Object metadata = Reflect.on(consumer).get("metadata");
             List<String> shadowTopic = getShadowTopics(topics, groupId);
 
             Object cluster = ReflectUtil.reflectSlience(metadata, "cluster");
             Iterable<Node> nodes;
+
             if (cluster != null) {
-                nodes = Reflect.on(cluster).get("nodes");
+                nodes = reflectNodes(cluster);
             } else {
                 Object cache = ReflectUtil.reflectSlience(metadata, "cache");
                 if (cache != null) {
-                    nodes = Reflect.on(cache).get("nodes");
+                    nodes = reflectNodes(cache);
                 } else {
                     throw new PressureMeasureError("未支持的kafka版本！未能获取nodes");
                 }
@@ -95,11 +93,21 @@ public class ConsumerMetaData {
                 sb.append(Reflect.on(node).get("host").toString()).append(":").append(Reflect.on(node).get("port")
                         .toString()).append(",");
             }
-
             return new ConsumerMetaData(topics, groupId, shadowTopic, sb.substring(0, sb.length() - 1));
         } catch (ReflectException e) {
             throw new PressureMeasureError(e);
         }
+    }
+
+    /**
+     * add kafka 2.5.1 supported
+     *
+     * @param cache
+     * @return
+     */
+    private static Iterable<Node> reflectNodes(Object cache) {
+        Object nodesObj = Reflect.on(cache).get("nodes");
+        return Map.class.isAssignableFrom(nodesObj.getClass()) ? ((Map<Object, Node>) nodesObj).values() : (Iterable<Node>) nodesObj;
     }
 
     public static List<String> getShadowTopics(Set<String> topics, String groupId) {
@@ -110,10 +118,10 @@ public class ConsumerMetaData {
                  * topic 都需要在白名单中配置好才可以启动
                  */
                 if (StringUtils.isNotBlank(topic) && !Pradar.isClusterTestPrefix(topic)) {
-                    if (GlobalConfig.getInstance().getMqWhiteList().contains(topic) || GlobalConfig.getInstance()
-                            .getMqWhiteList().contains(topic + '#' + groupId)) {
-                        topicList.add(Pradar.addClusterTestPrefix(topic));
-                    }
+                   /* if (GlobalConfig.getInstance().getMqWhiteList().contains(topic) || GlobalConfig.getInstance()
+                            .getMqWhiteList().contains(topic + '#' + groupId)) {*/
+                    topicList.add(Pradar.addClusterTestPrefix(topic));
+                    //}
                 }
             }
         }
