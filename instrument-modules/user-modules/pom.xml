@@ -49,6 +49,7 @@
         <module>module-httpserver</module>
         <module>module-jetty</module>
         <module>module-mongodb</module>
+        <module>module-mongodb4x</module>
         <module>module-hikariCP</module>
         <module>module-hystrix</module>
         <module>module-logback</module>
